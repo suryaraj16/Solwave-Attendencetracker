@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Solwave — Student Attendance Tracker</title>
+  <style>
+    /* --------- Basic design tokens --------- */
+    :root{
+      --bg:#0f1724; /* deep navy */
+      --card:#0b1220;
+      --muted:#9aa7b2;
+      --accent:#00bcd4; /* solwave accent */
+      --glass: rgba(255,255,255,0.03);
+      --success:#16a34a;
+      --danger:#ef4444;
+      --radius:12px;
+      font-family: Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+    }
+
+    /* --------- Page layout --------- */
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071026 0%, #071b2b 100%);color:#e6eef4}
+    .container{max-width:1100px;margin:28px auto;padding:22px}
+
+    /* --------- Header / Footer (Solwave branding) --------- */
+    header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:14px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter: blur(6px);box-shadow: 0 6px 18px rgba(2,6,23,0.6)}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#6dd5ed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#042028}
+    .brand h1{font-size:20px;margin:0}
+    .brand p{margin:0;font-size:12px;color:var(--muted)}
+
+    /* --------- Main grid --------- */
+    .grid{display:grid;grid-template-columns: 360px 1fr;gap:18px;margin-top:18px}
+
+    /* --------- Left panel (controls) --------- */
+    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input[type=text], input[type=date], select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit}
+    button{background:var(--accent);border:none;color:#042028;padding:10px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+
+    .controls{display:flex;flex-direction:column;gap:10px}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+
+    /* --------- Right panel (attendance table) --------- */
+    .toolbar{display:flex;align-items:center;gap:10px;justify-content:space-between}
+    .search{display:flex;gap:8px;align-items:center}
+    .pill{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:999px;font-size:13px}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03)}
+    th{font-size:13px;color:var(--muted)}
+    td{font-size:14px}
+
+    .status-present{background:linear-gradient(90deg,var(--success),#86efac);color:#042028;padding:6px 10px;border-radius:999px;font-weight:600}
+    .status-absent{background:linear-gradient(90deg,var(--danger),#fda4af);color:#042028;padding:6px 10px;border-radius:999px;font-weight:600}
+
+    .actions{display:flex;gap:8px}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;color:var(--muted);cursor:pointer}
+
+    footer{margin-top:20px;padding:14px;border-radius:12px;background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
+
+    /* --------- Responsiveness --------- */
+    @media (max-width:920px){
+      .grid{grid-template-columns:1fr;}
+      header{flex-direction:column;gap:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">SW</div>
+        <div>
+          <h1>Solwave</h1>
+          <p>Student Attendance Tracker — Exam Hub Edition</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="pill">Local (browser) data</div>
+        <div class="pill">No backend required</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left column: Controls -->
+      <div class="card">
+        <h3 style="margin:0 0 10px 0">Manage Students</h3>
+        <div class="controls">
+          <label>Student name</label>
+          <input id="studentName" type="text" placeholder="e.g. Ravi Kumar">
+
+          <div class="row">
+            <div>
+              <label>Roll / ID</label>
+              <input id="studentId" type="text" placeholder="e.g. 01">
+            </div>
+            <div>
+              <label>Class / Batch</label>
+              <input id="studentBatch" type="text" placeholder="e.g. B.Tech CSE">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px">
+            <button id="addStudentBtn">Add Student</button>
+            <button id="clearAllBtn" class="ghost">Clear All</button>
+          </div>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+          <h4 style="margin:0">Attendance Controls</h4>
+          <label>Date</label>
+          <input id="attendanceDate" type="date">
+
+          <div class="row">
+            <button id="markAllPresent">Mark All Present</button>
+            <button id="markAllAbsent" class="ghost">Mark All Absent</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="saveAttendance">Save Attendance</button>
+            <button id="exportCSV" class="ghost">Export CSV</button>
+          </div>
+
+          <p class="muted" style="margin-top:8px">Tip: Data is saved locally in your browser. Use Export to create a CSV backup.</p>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+          <h4 style="margin:0">Import / Restore</h4>
+          <input id="importFile" type="file" accept=".json,.csv">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="importBtn">Import File</button>
+            <button id="resetStorage" class="ghost">Reset Storage</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right column: Table and toolbar -->
+      <div>
+        <div class="card">
+          <div class="toolbar">
+            <div style="display:flex;gap:10px;align-items:center">
+              <div class="search">
+                <input id="searchBox" type="text" placeholder="Search name or roll" style="padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass)">
+                <div class="pill">Students: <span id="count">0</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="printBtn" class="ghost">Print</button>
+              <button id="downloadJson" class="ghost">Download JSON</button>
+            </div>
+          </div>
+
+          <table id="studentsTable" aria-label="students table">
+            <thead>
+              <tr>
+                <th style="width:44px">#</th>
+                <th>Roll / Name</th>
+                <th>Batch</th>
+                <th style="width:130px">Today's Status</th>
+                <th style="width:120px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <!-- rows populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <footer>
+          <div>Solwave — Exam Hub • Student Attendance Tracker</div>
+          <div>Made with ♥ • Local mode • <span id="lastSaved">Never saved</span></div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Basic attendance tracker using localStorage
+    const STORAGE_KEY = 'solwave_attendance_v1';
+
+    // Elements
+    const tbody = document.getElementById('tbody');
+    const studentName = document.getElementById('studentName');
+    const studentId = document.getElementById('studentId');
+    const studentBatch = document.getElementById('studentBatch');
+    const addStudentBtn = document.getElementById('addStudentBtn');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const attendanceDate = document.getElementById('attendanceDate');
+    const markAllPresent = document.getElementById('markAllPresent');
+    const markAllAbsent = document.getElementById('markAllAbsent');
+    const saveAttendance = document.getElementById('saveAttendance');
+    const exportCSV = document.getElementById('exportCSV');
+    const searchBox = document.getElementById('searchBox');
+    const countEl = document.getElementById('count');
+    const lastSaved = document.getElementById('lastSaved');
+    const importFile = document.getElementById('importFile');
+    const importBtn = document.getElementById('importBtn');
+    const resetStorage = document.getElementById('resetStorage');
+    const downloadJson = document.getElementById('downloadJson');
+    const printBtn = document.getElementById('printBtn');
+
+    // State
+    let state = { students: [], attendance: {} };
+
+    // Helpers
+    function uid(){ return Math.random().toString(36).slice(2,9) }
+    function todayISO(d=null){
+      const dt = d ? new Date(d) : new Date();
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth()+1).padStart(2,'0');
+      const dd = String(dt.getDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    }
+
+    // Load & Save
+    function load(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        try{ state = JSON.parse(raw) }catch(e){ console.error('corrupt data', e); state = {students:[],attendance:{}} }
+      }
+      render();
+    }
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      lastSaved.textContent = new Date().toLocaleString();
+    }
+
+    // UI actions
+    function addStudent(){
+      const name = studentName.value.trim();
+      const sid = studentId.value.trim() || uid();
+      const batch = studentBatch.value.trim() || 'General';
+      if(!name) return alert('Please enter student name');
+      state.students.push({id:uid(), roll:sid, name, batch});
+      studentName.value = '';
+      studentId.value = '';
+      studentBatch.value = '';
+      save(); render();
+    }
+
+    function clearAll(){
+      if(!confirm('Delete ALL students and attendance?')) return;
+      state = {students:[], attendance:{}}; save(); render();
+    }
+
+    function render(filter=''){
+      const dateKey = attendanceDate.value || todayISO();
+      const students = state.students.filter(s => {
+        if(!filter) return true;
+        const q = filter.toLowerCase();
+        return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q)
+      });
+      tbody.innerHTML = '';
+      students.forEach((s, i) =>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td><strong>${s.roll}</strong> — ${s.name}</td>
+          <td>${s.batch}</td>
+          <td>${renderStatus(s.id, dateKey)}</td>
+          <td>
+            <div style="display:flex;gap:8px">
+              <button class="ghost" data-id="${s.id}" data-action="present">P</button>
+              <button class="ghost" data-id="${s.id}" data-action="absent">A</button>
+              <button class="ghost" data-id="${s.id}" data-action="remove">Del</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      countEl.textContent = state.students.length;
+      // attach handlers
+      tbody.querySelectorAll('button').forEach(b=>{
+        b.onclick = (e)=>{
+          const id = b.dataset.id; const act = b.dataset.action; const d = attendanceDate.value || todayISO();
+          if(act==='present'){ setStatus(id,d,true); }
+          else if(act==='absent'){ setStatus(id,d,false); }
+          else if(act==='remove'){ removeStudent(id); }
+        }
+      })
+    }
+
+    function renderStatus(id, dateKey){
+      const day = (state.attendance[dateKey] || {})[id];
+      if(day === true) return `<span class="status-present">Present</span>`;
+      if(day === false) return `<span class="status-absent">Absent</span>`;
+      return `<span class="pill">—</span>`;
+    }
+
+    function setStatus(id, dateKey, isPresent){
+      if(!state.attendance[dateKey]) state.attendance[dateKey] = {};
+      state.attendance[dateKey][id] = !!isPresent;
+      save(); render(searchBox.value);
+    }
+
+    function removeStudent(id){
+      if(!confirm('Remove this student?')) return;
+      state.students = state.students.filter(s => s.id !== id);
+      // also remove attendance entries
+      for(const d in state.attendance) delete state.attendance[d][id];
+      save(); render(searchBox.value);
+    }
+
+    // Bulk mark
+    function bulkMark(present){
+      const dateKey = attendanceDate.value || todayISO();
+      if(!state.attendance[dateKey]) state.attendance[dateKey] = {};
+      state.students.forEach(s => state.attendance[dateKey][s.id] = !!present);
+      save(); render(searchBox.value);
+    }
+
+    // Export CSV utility
+    function exportCSVfn(){
+      // create a wide CSV: rows = student, columns = date columns (sorted)
+      const dates = Object.keys(state.attendance).sort();
+      const header = ['Roll','Name','Batch',...dates];
+      const rows = state.students.map(s => {
+        const r = [s.roll, s.name, s.batch];
+        dates.forEach(d => {
+          const v = (state.attendance[d] || {})[s.id];
+          r.push(v === true ? 'P' : (v === false ? 'A' : ''));
+        });
+        return r;
+      });
+      const csv = [header.join(','), ...rows.map(r=> r.map(cell => '"'+String(cell).replace(/"/g,'""')+'"').join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'solwave_attendance.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Download JSON
+    function downloadJSON(){
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'solwave_attendance.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Import (JSON or CSV basic)
+    function importFileFn(file){
+      if(!file) return alert('Choose a file first');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const txt = e.target.result;
+        try{
+          if(file.name.toLowerCase().endsWith('.json')){
+            const obj = JSON.parse(txt);
+            if(!obj.students) return alert('Invalid JSON format');
+            state = obj; save(); render();
+            alert('Imported JSON successfully');
+          } else if(file.name.toLowerCase().endsWith('.csv')){
+            // basic CSV import that expects first three columns: Roll,Name,Batch
+            const lines = txt.split(/\r?\n/).filter(Boolean);
+            const arr = lines.slice(1).map(l=>{
+              // crude split by comma (handles quoted values)
+              const parts = l.match(/(?:\"([^\"]*)\"|([^,]+))/g)?.map(s=>s.replace(/^"|"$/g,'')) || l.split(',');
+              return {roll:parts[0]||uid(), name:parts[1]||'Unnamed', batch:parts[2]||'General'}
+            });
+            state.students = arr.map(a=>({id:uid(),roll:a.roll.trim(),name:a.name.trim(),batch:a.batch.trim()}));
+            state.attendance = {};
+            save(); render();
+            alert('Imported CSV students (first sheet only)');
+          } else {
+            alert('Unsupported file type');
+          }
+        }catch(err){console.error(err); alert('Import failed: '+err.message)}
+      }
+      reader.readAsText(file);
+    }
+
+    // Reset storage
+    function resetStorageFn(){ if(confirm('Reset all storage?')){ localStorage.removeItem(STORAGE_KEY); state={students:[],attendance:{}}; render(); lastSaved.textContent='Never saved'; } }
+
+    // Attach events
+    addStudentBtn.onclick = addStudent;
+    clearAllBtn.onclick = () => { studentName.value=''; studentId.value=''; studentBatch.value=''; };
+    markAllPresent.onclick = ()=> bulkMark(true);
+    markAllAbsent.onclick = ()=> bulkMark(false);
+    saveAttendance.onclick = ()=> { save(); alert('Saved to local browser storage'); };
+    exportCSV.onclick = exportCSVfn;
+    searchBox.oninput = ()=> render(searchBox.value);
+    attendanceDate.value = todayISO(); attendanceDate.onchange = ()=> render(searchBox.value);
+    importBtn.onclick = ()=> importFileFn(importFile.files[0]);
+    resetStorage.onclick = resetStorageFn;
+    downloadJson.onclick = downloadJSON;
+    printBtn.onclick = ()=> window.print();
+
+    // init
+    load();
+
+    // Example sample data (only add if empty)
+    if(state.students.length===0){
+      state.students = [
+        {id:uid(), roll:'01', name:'Asha Verma', batch:'B.Tech CSE'},
+        {id:uid(), roll:'02', name:'Rohan Singh', batch:'B.Tech CSE'},
+        {id:uid(), roll:'03', name:'Neha Patel', batch:'B.Sc Maths'}
+      ]; save(); render();
+    }
+  </script>
+</body>
+</html>
